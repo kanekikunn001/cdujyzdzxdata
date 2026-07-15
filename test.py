@@ -4,6 +4,7 @@ import json
 import sys
 from scheduling_algorithm.scheduling_configuration_file_module import SchedulingConfigurationFileModule
 from scheduling_algorithm.scheduling_configuration_allocate import SchedulingConfigurationAllocate
+from scheduling_algorithm.operations_research_scheduler import OperationsResearchScheduler
 from database.code.basecmd import CourseSchedule
 
 def test_basic_components():
@@ -242,6 +243,82 @@ def test_specific_scheduling_scenarios():
         traceback.print_exc()
         return False
 
+
+def test_or_scheduler():
+    """测试运筹学目标规划调度器"""
+    print("\n" + "=" * 60)
+    print("🧠 测试运筹学目标规划调度器...")
+    print("=" * 60)
+
+    config_path = "configuration_file/scheduling_configuration_file.json"
+    if not os.path.exists(config_path):
+        print(f"❌ 配置文件不存在: {config_path}")
+        return False
+
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+
+        or_scheduler = OperationsResearchScheduler(
+            config_data,
+            "database/data/JYZDZXdata.db"
+        )
+
+        students = or_scheduler.build_students()
+        print(f"\n  📋 学生构建: {len(students)} 名学生")
+
+        if students:
+            sample = students[0]
+            free_days = sum(
+                1 for d in range(1, 6)
+                for t in range(1, 7)
+                if sample.is_free(d, t)
+            )
+            print(f"     示例学生 {sample.id}: 部门={sample.department}, "
+                  f"{'新' if sample.is_new_member else '老'}成员, "
+                  f"空闲时段={free_days}个")
+
+        shifts = or_scheduler.build_shifts()
+        total_slots = sum(s.required_count for s in shifts)
+        print(f"  📅 班次构建: {len(shifts)} 个班次 ({total_slots} 个槽位)")
+
+        if shifts:
+            for s in shifts[:3]:
+                old_req = f", 需老成员≥{s.min_old_members}" if s.min_old_members > 0 else ""
+                dept_info = f", 专属部门={s.only_department}" if s.only_department else ""
+                print(f"     {s.day_name} {s.time_name}: 需{s.required_count}人{old_req}{dept_info}")
+
+        result = or_scheduler.solve()
+
+        if result:
+            print(f"\n  ✅ 求解成功: {len(result)} 个班次已分配")
+            total_assigned = sum(len(v) for v in result.values())
+            print(f"     总计分配 {total_assigned}/{total_slots} 个槽位")
+
+            print("\n  🔍 验证排班质量:")
+            from collections import defaultdict
+            student_loads = defaultdict(int)
+            for shift_key, workers in result.items():
+                for wid in workers:
+                    student_loads[wid] += 1
+            if student_loads:
+                avg_load = sum(student_loads.values()) / len(student_loads)
+                variance = sum((v - avg_load) ** 2 for v in student_loads.values()) / len(student_loads)
+                min_load, max_load = min(student_loads.values()), max(student_loads.values())
+                print(f"     工作量范围: [{min_load}, {max_load}], 平均: {avg_load:.2f}")
+                print(f"     公平性方差: {variance:.4f} (越小越公平)")
+        else:
+            print("  ⚠️ 求解结果为空（可能是数据库缺少数据）")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ OR 调度器测试失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def main():
     """主测试函数"""
     print("排班程序功能测试工具")
@@ -253,6 +330,7 @@ def main():
     allocation_ok = test_scheduling_allocation()
     database_ok = test_database_operations()
     scenarios_ok = test_specific_scheduling_scenarios()
+    or_ok = test_or_scheduler()
     
     print("\n" + "=" * 60)
     print("测试总结:")
@@ -263,6 +341,7 @@ def main():
     print(f"排班分配测试: {'✅ 通过' if allocation_ok else '❌ 失败'}")
     print(f"数据库操作测试: {'✅ 通过' if database_ok else '❌ 失败'}")
     print(f"特定场景测试: {'✅ 通过' if scenarios_ok else '❌ 失败'}")
+    print(f"OR调度器测试: {'✅ 通过' if or_ok else '❌ 失败'}")
     
     # 整体评估
     overall_result = all([db_exists, config_exists, config_module_ok, allocation_ok, database_ok, scenarios_ok])

@@ -1,4 +1,6 @@
 {
+    "algorithm": "goal_programming",
+    "algorithm_description": "可选: 'greedy'(原贪心算法) 或 'goal_programming'(运筹学目标规划)",
     "week" : 1,
     "days": [1,2,3,4,5],
     "days_order": [1,2,3,4,5],

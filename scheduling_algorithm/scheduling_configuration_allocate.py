@@ -11,6 +11,7 @@ from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scheduling_algorithm.sheduling_tools_module import calculate_shift_score
+from scheduling_algorithm.operations_research_scheduler import OperationsResearchScheduler
 
 # 数据库操作类：专门和数据库打交道，查空闲、查部门
 class SchedulingDB:
@@ -550,7 +551,96 @@ class SchedulingConfigurationAllocate:
             traceback.print_exc()
             return False
 
-    # 排班总入口
+    # ==================================================================
+    # 运筹学目标规划排班入口（新算法）
+    # ==================================================================
+    def active_or(self, only_days=None):
+        """
+        使用运筹学目标规划算法进行全局排班
+        
+        与 active() 相比的改进:
+        - 全局视角求解，非逐班次贪心
+        - 工作量方差最小化为最高优先级目标
+        - 模拟退火局部搜索避免局部最优
+        - 数学化的代价函数替代人工打分
+
+        Args:
+            only_days: 只排某些天，格式同 active()
+        
+        Returns:
+            schedule_result (与 active() 格式兼容)
+        """
+        try:
+            print("\n" + "=" * 60)
+            print("🧠 启动运筹学目标规划排班模式")
+            print("=" * 60)
+
+            # 创建 OR 调度器
+            or_scheduler = OperationsResearchScheduler(
+                self.scheduling_configuration_file,
+                self.db.db_path
+            )
+
+            # 求解
+            raw_result = or_scheduler.solve()
+            # raw_result 格式: {"星期一_1-2节": ["sid1", "sid2"], ...}
+
+            if not raw_result:
+                print("❌ OR 调度器未产生结果，回退到原始算法")
+                return self.active(only_days)
+
+            # 格式转换: OR结果 → active() 兼容格式
+            self.schedule_result = {}
+            day_filter = set(only_days) if only_days else None
+
+            for day in self.days:
+                if day_filter is not None and day not in day_filter:
+                    continue
+
+                day_name = self.week_name_map[day]
+                day_res = {}
+                today_times = self.get_day_times(day)
+
+                for time_slot in today_times:
+                    time_name = self.time_name_map[time_slot]
+                    or_key = f"{day_name}_{time_name}"
+                    workers = raw_result.get(or_key, [])
+
+                    limit_dept = self.acquire_time_period_only_department(day, time_slot)
+                    need = self.acquire_time_period_people_number(time_slot)
+
+                    day_res[time_name] = {
+                        "需要人数": need,
+                        "排班人员": workers,
+                        "限定部门": limit_dept or "无"
+                    }
+
+                    if len(workers) < need:
+                        print(f"  ⚠️ {or_key}: 人员不足 ({len(workers)}/{need})")
+
+                self.schedule_result[day_name] = day_res
+
+            print("\n✅ 运筹学排班完成")
+
+            # 正式模式下更新数据库
+            if self.scheduling_configuration_file.get('module') == 'formal':
+                if self.update_duty_table(self.schedule_result):
+                    print("✅ 值班表已更新")
+                else:
+                    print("❌ 值班表更新失败")
+
+            # 保存到JSON文件
+            self.save_to_json_files(self.schedule_result)
+
+            return self.schedule_result
+
+        except Exception as e:
+            print(f"❌ OR 排班出错: {e}, 回退到原始算法")
+            import traceback
+            traceback.print_exc()
+            return self.active(only_days)
+
+    # 排班总入口（原始贪心算法）
     def active(self, only_days=None):
         try:
             print("开始排班...")
