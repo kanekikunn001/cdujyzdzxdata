@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Backup files
+backup/
+
+# Database files
+*.db
+
+# Runtime data (mini program scheduling data)
+mini_program_data/
+
+# User feedback / privacy data
+feedback/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+configuration_file/cloud_configuration_file.json
+
+# Distribution
+dist/
+build/
+*.egg-info/

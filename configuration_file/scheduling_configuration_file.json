@@ -1,0 +1,27 @@
+{
+    "week" : 1,
+    "days": [1,2,3,4,5],
+    "days_order": [1,2,3,4,5],
+    "time_period": [{"days":[1,2,3,4],"times":[1,2,3,4,5,6]},
+    {"days":[5],"times":[1,2,3]}],
+    "people": {
+        "type": "for_day",
+        "schedules": [
+            {"times": [1,2,4,5], "number": 4},
+            {"times": 3, "number": 2},
+            {"times": 6, "number": 1}
+        ]
+    },
+    "necessary_old_member" : 1,
+    "same_department": true,
+    "module" : "formal",
+    "night_shift": true,
+    "only_department": [
+        {"department": "外联部", "day" : 2, "time_period" : [4,5]}
+    ],
+    "together" : [
+        ["202410215208", "202410211111"]
+    ],
+    "separation" : [
+    ]
+}

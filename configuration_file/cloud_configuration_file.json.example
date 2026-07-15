@@ -1,0 +1,32 @@
+{
+  "tencent_cloud": {
+    "cos": {
+      "secret_id": "YOUR_SECRET_ID",
+      "secret_key": "YOUR_SECRET_KEY",
+      "region": "ap-chengdu",
+      "bucket": "your-bucket-name",
+      "bucket_domain": "https://your-bucket.cos.ap-chengdu.myqcloud.com",
+      "timeout": 60,
+      "scheme": "https"
+    }
+  },
+  "backup": {
+    "auto_upload": true,
+    "local_backup_dir": "backup/database",
+    "cloud_backup_prefix": "database_backups/",
+    "keep_local_backups": 2,
+    "keep_cloud_backups": 5
+  },
+  "mini_program_data": {
+    "local_data_dir": "mini_program_data",
+    "cloud_data_prefix": "data/"
+  },
+  "feedback": {
+    "auto_send": true,
+    "local_feedback_dir": "feedback",
+    "cloud_feedback_prefix": "feedback_pass/"
+  },
+  "sync": {
+    "auto_sync_on_startup": false
+  }
+}
